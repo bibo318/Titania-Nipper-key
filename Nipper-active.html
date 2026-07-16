@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DemoNipper-Active</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:      #00ff41;
+      --green-dim:  #00b32d;
+      --green-dark: #003d0f;
+      --green-glow: rgba(0,255,65,0.15);
+      --bg:         #070a07;
+      --bg2:        #0c0f0c;
+      --bg3:        #111411;
+      --border:     #1a2e1a;
+      --border-bright: #2a4a2a;
+      --text:       #b8e8b8;
+      --text-dim:   #4a704a;
+      --red:        #ff4040;
+      --yellow:     #ffd000;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* CRT scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.07) 3px,
+        rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 2px; }
+
+    a { color: var(--green); }
+    a:hover { color: #fff; }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 36px 20px 60px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .logo-frame {
+      display: inline-block;
+      border: 1px solid var(--border-bright);
+      padding: 24px 48px;
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .logo-frame::before {
+      content: '┌─ DemoNipper-Active ─┐';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg);
+      padding: 0 8px;
+      color: var(--text-dim);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .logo-ascii {
+      color: var(--green);
+      text-shadow: 0 0 12px var(--green), 0 0 24px rgba(0,255,65,0.3);
+      white-space: pre;
+      font-size: 11px;
+      line-height: 1.25;
+      letter-spacing: 0.5px;
+    }
+
+    .tagline {
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .badges {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--green-dark);
+      color: var(--green-dim);
+      font-size: 10px;
+      padding: 2px 10px;
+      letter-spacing: 1.5px;
+      border: 1px solid var(--border-bright);
+    }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .panel-title {
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      padding: 7px 14px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--green-dim);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .panel-title .led {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      flex-shrink: 0;
+    }
+
+    .panel-title .led.red  { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+    .panel-title .led.yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+    .panel-title .led.dim  { background: var(--text-dim); box-shadow: none; }
+
+    .panel-body { padding: 16px; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+      gap: 0;
+    }
+
+    .tab-btn {
+      padding: 7px 18px;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+
+    .tab-btn.active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+    }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 1px dashed var(--border-bright);
+      padding: 36px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.over {
+      border-color: var(--green);
+      background: var(--green-glow);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+      color: var(--text-dim);
+      display: block;
+    }
+
+    .drop-text { color: var(--text-dim); font-size: 12px; }
+    .drop-text em { color: var(--green); font-style: normal; }
+
+    .file-info {
+      margin-top: 10px;
+      color: var(--green);
+      font-size: 12px;
+      display: none;
+    }
+
+    /* ── Textarea ── */
+    .json-input {
+      width: 100%;
+      height: 190px;
+      background: var(--bg);
+      border: 1px solid var(--border-bright);
+      color: var(--text);
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      font-size: 12px;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+      line-height: 1.6;
+    }
+
+    .json-input:focus { border-color: var(--green); }
+
+    .json-input::placeholder { color: var(--text-dim); }
+
+    /* ── Generate button ── */
+    .btn-gen {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: color 0.2s;
+      margin-top: 14px;
+    }
+
+    .btn-gen .fill {
+      position: absolute;
+      inset: 0;
+      background: var(--green);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.2s ease;
+      z-index: 0;
+    }
+
+    .btn-gen:hover .fill { transform: scaleX(1); }
+    .btn-gen:hover { color: #000; }
+    .btn-gen span { position: relative; z-index: 1; }
+
+    .btn-gen:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .btn-gen:disabled .fill { display: none; }
+
+    /* ── Console ── */
+    .console-out {
+      background: var(--bg);
+      padding: 12px 14px;
+      height: 150px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .log { display: flex; gap: 10px; }
+    .log-pfx  { flex-shrink: 0; color: var(--text-dim); }
+    .log-ok   { color: var(--green); }
+    .log-err  { color: var(--red); }
+    .log-warn { color: var(--yellow); }
+    .log-dim  { color: var(--text-dim); }
+
+    /* ── Output ── */
+    .out-json {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 14px;
+      font-size: 11.5px;
+      line-height: 1.7;
+      overflow: auto;
+      max-height: 320px;
+      white-space: pre;
+      color: var(--text);
+    }
+
+    .btn-dl {
+      display: block;
+      width: 100%;
+      padding: 11px;
+      background: var(--green-dark);
+      border: 1px solid var(--green-dim);
+      color: var(--green);
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: background 0.15s;
+    }
+
+    .btn-dl:hover { background: #005518; color: var(--green); }
+
+    /* ── Status bar ── */
+    .statusbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .s-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .s-dot.ok  { background: var(--green);  box-shadow: 0 0 5px var(--green); }
+    .s-dot.err { background: var(--red);    box-shadow: 0 0 5px var(--red); }
+    .s-dot.spin { animation: pulse 1s infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    .sep { color: var(--border-bright); }
+
+    .hidden { display: none !important; }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .cursor { animation: blink 1s step-end infinite; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="logo-frame">
+      <pre class="logo-ascii">
+ ██████╗ ███████╗███╗   ███╗ ██████╗
+ ██╔══██╗██╔════╝████╗ ████║██╔═══██╗
+ ██║  ██║█████╗  ██╔████╔██║██║   ██║
+ ██║  ██║██╔══╝  ██║╚██╔╝██║██║   ██║
+ ██████╔╝███████╗██║ ╚═╝ ██║╚██████╔╝
+ ╚═════╝ ╚══════╝╚═╝     ╚═╝ ╚═════╝
+███╗   ██╗██╗██████╗ ██████╗ ███████╗██████╗
+████╗  ██║██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
+██╔██╗ ██║██║██████╔╝██████╔╝█████╗  ██████╔╝
+██║╚██╗██║██║██╔═══╝ ██╔═══╝ ██╔══╝  ██╔══██╗
+██║ ╚████║██║██║     ██║     ███████╗██║  ██║
+╚═╝  ╚═══╝╚═╝╚═╝     ╚═╝     ╚══════╝╚═╝  ╚═╝
+      </pre>
+    </div>
+    <p class="tagline">Nipper License Activation Generator</p>
+    <div class="badges">
+      <span class="badge">v1.0.0</span>
+      <span class="badge">CLIENT-SIDE ONLY</span>
+      <span class="badge">NO SERVER</span>
+    </div>
+  </header>
+
+  <!-- ── Input panel ── -->
+  <div class="panel">
+    <div class="panel-title">
+      <div class="led dim" id="input-led"></div>
+      INPUT &nbsp;// &nbsp;activation-request.nlr
+    </div>
+    <div class="panel-body">
+      <div class="tabs">
+        <div class="tab-btn active" data-tab="upload">[ UPLOAD FILE ]</div>
+        <div class="tab-btn" data-tab="paste">[ PASTE JSON ]</div>
+      </div>
+
+      <!-- Upload -->
+      <div id="pane-upload">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" accept=".nlr,.json" id="file-input">
+          <span class="drop-icon">▣</span>
+          <div class="drop-text">
+            Drop <em>activation-request.nlr</em> here<br>
+            or click to browse (.nlr / .json)
+          </div>
+          <div class="file-info" id="file-info"></div>
+        </div>
+      </div>
+
+      <!-- Paste -->
+      <div id="pane-paste" class="hidden">
+        <textarea class="json-input" id="paste-area" placeholder='{
+  "headers": {
+    "activation_code": "XXXX-XXXX-XXXX-XXXX",
+    "serial_number": "SN-000000",
+    "transaction_id": "TXN-000000"
+  }
+}'></textarea>
+      </div>
+
+      <button class="btn-gen" id="gen-btn" onclick="generate()">
+        <div class="fill"></div>
+        <span>&#9889; GENERATE ACTIVATION RESPONSE &#9889;</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Console panel ── -->
+  <div class="panel">
+    <div class="panel-title">
+      <div class="led" id="console-led"></div>
+      CONSOLE OUTPUT
+    </div>
+    <div class="console-out" id="console"></div>
+  </div>
+
+  <!-- ── Output panel ── -->
+  <div class="panel hidden" id="out-panel">
+    <div class="panel-title">
+      <div class="led"></div>
+      OUTPUT &nbsp;// &nbsp;activation-response.nlr
+    </div>
+    <div class="panel-body">
+      <div class="out-json" id="out-json"></div>
+      <a class="btn-dl" id="dl-btn" download="activation-response.nlr">
+        &#11015; DOWNLOAD &nbsp;activation-response.nlr
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Status bar ── -->
+  <div class="statusbar">
+    <div class="s-dot" id="s-dot"></div>
+    <span id="s-text">Ready<span class="cursor">_</span></span>
+    <span class="sep">|</span>
+    DemoNipper-Active
+    <span class="sep">|</span>
+    Static &middot; No server required
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────
+//  Config
+// ─────────────────────────────────────────────────────────
+const SECRET_KEY = "1234abcd5678fedc";
+
+const DEFAULT_FEATURES = [
+  { code: "Device:All",            description: "Support for all Nipper network devices" },
+  { code: "Extension:All",         description: "Support for all Nipper capability extensions" },
+  { code: "Feature:All",           description: "Everything" },
+  { code: "Report:All",            description: "All Reports" },
+  { code: "Mitigation Script:All", description: "Support for all types of mitigation scripts" },
+  { code: "Save:All",              description: "Support for all save formats" },
+];
+
+// ─────────────────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────────────────
+let activeTab = 'upload';
+let fileText  = null;
+
+// ─────────────────────────────────────────────────────────
+//  Tabs
+// ─────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTab = btn.dataset.tab;
+    document.getElementById('pane-upload').classList.toggle('hidden', activeTab !== 'upload');
+    document.getElementById('pane-paste').classList.toggle('hidden', activeTab !== 'paste');
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+//  File handling
+// ─────────────────────────────────────────────────────────
+const dz       = document.getElementById('drop-zone');
+const fileInp  = document.getElementById('file-input');
+const fileInfo = document.getElementById('file-info');
+
+fileInp.addEventListener('change', () => loadFile(fileInp.files[0]));
+
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+
+function loadFile(f) {
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    fileText = e.target.result;
+    fileInfo.style.display = 'block';
+    fileInfo.textContent = '[+] Loaded: ' + f.name + ' (' + f.size + ' bytes)';
+    document.getElementById('input-led').className = 'led';
+    log('ok', 'File loaded: ' + f.name + ' (' + f.size + ' bytes)');
+  };
+  reader.readAsText(f);
+}
+
+// ─────────────────────────────────────────────────────────
+//  Console logger
+// ─────────────────────────────────────────────────────────
+function log(type, msg) {
+  const c = document.getElementById('console');
+  const prefixes = { ok: '[+]', err: '[-]', info: '[?]', dim: '[*]' };
+  const classes  = { ok: 'log-ok', err: 'log-err', info: 'log-warn', dim: 'log-dim' };
+  const row = document.createElement('div');
+  row.className = 'log';
+  row.innerHTML =
+    '<span class="log-pfx">' + (prefixes[type] || '[*]') + '</span>' +
+    '<span class="' + (classes[type] || 'log-dim') + '">' + escHtml(msg) + '</span>';
+  c.appendChild(row);
+  c.scrollTop = c.scrollHeight;
+  // Update console LED color
+  if (type === 'err') document.getElementById('console-led').className = 'led red';
+}
+
+function logDivider() {
+  log('dim', '─'.repeat(52));
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─────────────────────────────────────────────────────────
+//  Status bar
+// ─────────────────────────────────────────────────────────
+function setStatus(state, text) {
+  // state: 'idle' | 'busy' | 'ok' | 'err'
+  const dot = document.getElementById('s-dot');
+  const txt = document.getElementById('s-text');
+  dot.className = 's-dot' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : state === 'busy' ? ' spin' : '');
+  txt.textContent = text;
+}
+
+// ─────────────────────────────────────────────────────────
+//  SHA-256 (Web Crypto API)
+// ─────────────────────────────────────────────────────────
+async function sha256hex(uint8) {
+  const buf = await crypto.subtle.digest('SHA-256', uint8);
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function computeHash(secretKey, bodyObj) {
+  // Mirrors Python: sha256(secret_key_bytes + json.dumps(body, separators=(',',':')).encode())
+  // JSON.stringify() produces compact JSON (no spaces) matching Python separators=(',',':')
+  const bodyStr    = JSON.stringify(bodyObj);
+  const enc        = new TextEncoder();
+  const secBytes   = enc.encode(secretKey);
+  const bodyBytes  = enc.encode(bodyStr);
+  const combined   = new Uint8Array(secBytes.length + bodyBytes.length);
+  combined.set(secBytes, 0);
+  combined.set(bodyBytes, secBytes.length);
+  return await sha256hex(combined);
+}
+
+// ─────────────────────────────────────────────────────────
+//  Build response — mirrors build_response() in Python
+// ─────────────────────────────────────────────────────────
+async function buildResponse(request) {
+  const hdr = request.headers || {};
+
+  for (const field of ['activation_code', 'serial_number', 'transaction_id']) {
+    if (!hdr[field]) throw new Error("Missing '" + field + "' in request headers");
+  }
+
+  // Keys in exact same order as the Python script (preserves JSON.stringify order for hash)
+  const body = {
+    activation_code: hdr.activation_code,
+    error_code:      0,
+    features:        DEFAULT_FEATURES,
+    serial_number:   hdr.serial_number,
+    status: {
+      description: "Working license",
+      name:        "Live"
+    },
+    term: {
+      period:     9999,
+      start_date: "2025-01-01"
+    },
+    transaction_id:   hdr.transaction_id,
+    type:             {},
+    usage:            [],
+    usage_allowance:  999
+  };
+
+  log('info', 'Computing SHA-256 response hash...');
+  const hash = await computeHash(SECRET_KEY, body);
+  log('ok', 'Hash: ' + hash);
+
+  return {
+    body,
+    headers: {
+      "Content-Type":   "application/json",
+      activation_code:  hdr.activation_code,
+      serial_number:    hdr.serial_number,
+      transaction_id:   hdr.transaction_id,
+      hash
+    }
+  };
+}
+
+// ─────────────────────────────────────────────────────────
+//  Main: generate()
+// ─────────────────────────────────────────────────────────
+async function generate() {
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  document.getElementById('out-panel').classList.add('hidden');
+  document.getElementById('console-led').className = 'led';
+  setStatus('busy', 'Processing...');
+  logDivider();
+  log('info', 'Starting activation response generation...');
+
+  try {
+    // ── Get raw input
+    let raw;
+    if (activeTab === 'upload') {
+      if (!fileText) throw new Error('No file loaded. Drop or browse a .nlr file first.');
+      raw = fileText;
+      log('info', 'Source: uploaded file');
+    } else {
+      raw = document.getElementById('paste-area').value.trim();
+      if (!raw) throw new Error('Input is empty. Paste the request JSON.');
+      log('info', 'Source: pasted JSON');
+    }
+
+    // ── Parse
+    log('info', 'Parsing request JSON...');
+    let request;
+    try {
+      request = JSON.parse(raw);
+    } catch (e) {
+      throw new Error('JSON parse error: ' + e.message);
+    }
+    log('ok', 'JSON parsed successfully');
+
+    const hdr = request.headers || {};
+    log('ok', 'activation_code : ' + (hdr.activation_code || '???'));
+    log('ok', 'serial_number   : ' + (hdr.serial_number   || '???'));
+    log('ok', 'transaction_id  : ' + (hdr.transaction_id  || '???'));
+
+    // ── Build
+    log('info', 'Building activation response...');
+    const response = await buildResponse(request);
+
+    // ── Display output
+    const pretty = JSON.stringify(response, null, 2);
+    document.getElementById('out-json').textContent = pretty;
+
+    const blob = new Blob([pretty], { type: 'application/json' });
+    document.getElementById('dl-btn').href = URL.createObjectURL(blob);
+
+    document.getElementById('out-panel').classList.remove('hidden');
+    document.getElementById('console-led').className = 'led';
+    log('ok', 'Done. activation-response.nlr is ready.');
+    logDivider();
+    setStatus('ok', 'Success — activation-response.nlr ready');
+
+  } catch (err) {
+    log('err', err.message);
+    logDivider();
+    document.getElementById('console-led').className = 'led red';
+    setStatus('err', 'Error: ' + err.message);
+  }
+
+  btn.disabled = false;
+}
+
+// ─────────────────────────────────────────────────────────
+//  Init log
+// ─────────────────────────────────────────────────────────
+log('dim', 'DemoNipper-Active ready. Awaiting input...');
+</script>
+</body>
+</html>
